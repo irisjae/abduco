@@ -147,8 +147,13 @@ static ssize_t write_all(int fd, const char *buf, size_t len) {
 	while (len > 0) {
 		ssize_t res = write(fd, buf, len);
 		if (res < 0) {
-			if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+			if (errno == EINTR)
 				continue;
+			if (errno == EAGAIN || errno == EWOULDBLOCK) {
+				struct timespec ts = {.tv_sec = 0, .tv_nsec = 1000000};
+				nanosleep(&ts, &ts);
+				continue;
+			}
 			return -1;
 		}
 		if (res == 0)
@@ -167,8 +172,11 @@ static ssize_t read_all(int fd, char *buf, size_t len) {
 		if (res < 0) {
 			if (errno == EWOULDBLOCK)
 				return ret - len;
-			if (errno == EAGAIN || errno == EINTR)
+			if (errno == EAGAIN || errno == EINTR) {
+				struct timespec ts = {.tv_sec = 0, .tv_nsec = 1000000};
+				nanosleep(&ts, &ts);
 				continue;
+			}
 			return -1;
 		}
 		if (res == 0)
